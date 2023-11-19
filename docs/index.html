@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>crisp-game-lib</title>
+    <meta
+      name="viewport"
+      content="width=device-width, height=device-height,
+    user-scalable=no, initial-scale=1, maximum-scale=1"
+    />
+    <script src="https://unpkg.com/sounds-some-sounds@3.0.0/build/index.js"></script>
+    <script src="https://unpkg.com/gif-capture-canvas@1.1.0/build/index.js"></script>
+    <script src="https://unpkg.com/pixi.js@5.3.0/dist/pixi.min.js"></script>
+    <script src="https://unpkg.com/pixi-filters@3.1.1/dist/pixi-filters.js"></script>
+    <script src="https://unpkg.com/crisp-game-lib@1.1.1/docs/bundle.js"></script>
+
+<script>
+title = "DEMON ESCAPE";
+
+description = `DON'T LET THE DEMON
+     SEE YOU!
+`;
+
+const G = {
+  WIDTH: 150,
+  HEIGHT: 100,
+  MAX_DEMON_DELAY: 300,
+  MIN_DEMON_DELAY: 60,
+  MIN_DEMON_LOOK_TIME: 60,
+  MAX_DEMON_LOOK_TIME: 300,
+  DEMON_TURN_TIME: 30,
+}
+
+options = {
+  viewSize: {x: G.WIDTH, y: G.HEIGHT},
+  isCapturing: true,
+  isCapturingGameCanvasOnly: true,
+  isShowingScore: false,
+  isReplayEnabled: true,
+  captureCanvasScale: 2,
+  seed: 83,
+  theme: "crt",
+};
+
+let player;
+
+let isLooking = true;
+let isTurningAway = false;
+let isTurningForwards = false;
+
+let isHidden = true;
+
+let turnTimer;
+let lookTimer;
+let turnedTimer;
+
+
+function update() {
+  if (!ticks)
+  {
+    initPlayer();
+    initDoor();
+    initDemon();
+  }
+
+  updatePlayer();
+  updateDoor();
+  updateDemon();
+
+  if (input.isJustPressed)
+  {
+    isHidden = false;
+    player.pos.x += 0.5;
+  }
+
+  if (input.isJustReleased)
+  {
+    isHidden = true;
+  }
+  
+  if (lookTimer > 0)
+  {
+    lookTimer -= 1;
+
+    if (lookTimer <= 0)
+    {
+      TurnAway();
+    }
+  }
+
+  if (turnTimer > 0)
+  {
+    turnTimer -= 1;
+
+    if (turnTimer <= 0)
+    {
+      if (isTurningAway)
+      {
+        FaceAway();
+      }
+      else if (isTurningForwards)
+      {
+        FaceForward();
+      }
+    }
+  }
+
+  if (turnedTimer > 0)
+  {
+    turnedTimer -= 1;
+
+    if (turnedTimer <= 0)
+    {
+      TurnForwards();
+    }
+  }
+
+}
+
+characters = [
+`
+
+
+yyyyYY
+llyyYY
+llyyYY
+yyyyYY
+`,
+`
+  yYYY
+ yyyYY
+yyyy l
+lyy
+yyl lc
+ycggll
+`,
+`
+GGGGGG
+GggggG
+GgccgG
+GgccgG
+GgggyG
+GggggG
+`,
+`
+r    r
+Rr  rR
+rgrrgr
+ rrrr 
+ yrry 
+  yy  
+`,
+`
+ r    
+ rr
+ rrrg
+  rrr
+  rrr
+   ry
+`,
+`
+r    r
+rr  rr
+rrrrrr
+ rrrr
+ rrrr
+  rr
+`,
+`
+l l l 
+r r r 
+r r r 
+ rrr  
+ rrrr
+  rrr 
+`,
+`
+ l l l
+ r r r
+ r r r
+  rrr
+ rrrr
+ rrr
+`
+]
+
+function TurnAway()
+{
+  turnTimer = G.DEMON_TURN_TIME;
+  isLooking = false;
+  isTurningForwards = false;
+  isTurningAway = true;
+}
+
+function TurnForwards()
+{
+  turnTimer = G.DEMON_TURN_TIME;
+  isLooking = false;
+  isTurningAway = false;
+  isTurningForwards = true;
+}
+
+function FaceAway()
+{
+  turnedTimer = rnd(G.MIN_DEMON_DELAY, G.MAX_DEMON_DELAY);
+  isLooking = false;
+  isTurningAway = false;
+  isTurningForwards = false;
+}
+
+function FaceForward()
+{
+  lookTimer = rnd(G.MIN_DEMON_LOOK_TIME, G.MAX_DEMON_LOOK_TIME);
+  isLooking = true;
+  isTurningAway = false;
+  isTurningForwards = false;
+}
+
+function initPlayer()
+{
+  player = {
+      pos: vec(G.WIDTH * 0.15, G.HEIGHT * 0.70),
+    };
+
+  color("black");
+  char("a", player.pos);
+}
+
+function initDoor()
+{
+  door = {
+    pos: vec(G.WIDTH * 0.85, G.HEIGHT * 0.70),
+  }
+
+  color("black");
+  char("c", door.pos);
+}
+
+function initDemon()
+{
+  isLooking = true;
+  isTurningAway = false;
+  isTurningForwards = false;
+
+  lookTimer = rnd(G.MIN_DEMON_LOOK_TIME, G.MAX_DEMON_LOOK_TIME);
+
+  demon = {
+    pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.35),
+    leftpos: vec(G.WIDTH * 0.45, G.HEIGHT * 0.4),
+    rightpos: vec(G.WIDTH * 0.55, G.HEIGHT * 0.4)
+  }
+
+  color("black");
+  char("d", demon.pos);
+  char("g", demon.leftpos);
+  char("h", demon.rightpos);
+}
+
+function updatePlayer()
+{
+    color("black");
+    if (isHidden)
+    {
+      char("a", player.pos);
+    }
+    else
+    {
+      char("b", player.pos);
+    }
+
+    if (!isHidden && isLooking)
+    {
+      isHidden = true;
+      end();
+    }
+}
+
+function updateDoor()
+{
+  color("black");
+
+  if (char("c", door.pos).isColliding.char.a || char("c", door.pos).isColliding.char.b)
+  {
+    text("You Escaped!", G.WIDTH * 0.5, G.HEIGHT * 0.8);
+    end();
+  }
+}
+
+function updateDemon()
+{
+  color("black");
+  char("g", demon.leftpos);
+  char("h", demon.rightpos);
+
+  if (isLooking)
+  {
+    char("d", demon.pos);
+  }
+  else if (isTurningAway || isTurningForwards)
+  {
+    char("e", demon.pos);
+  }
+  else if (!isLooking)
+  {
+    char("f", demon.pos);
+  }
+}
+
+addEventListener("load", onLoad);
+</script>
+
+  </head>
+  <body style="background: #ddd"></body>
+</html>
